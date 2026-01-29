@@ -294,43 +294,42 @@ export class AuthService {
 
     return { message: 'Verification code sent to email' };
   }
+  
+async verifyEmailCode(
+  email: string,
+  code: string,
+): Promise<{ message: string; verified: boolean }> {
+  const verification = await this.emailVerificationModel.findOne({ email });
 
-  async verifyEmailCode(
-    email: string,
-    code: string,
-  ): Promise<{ message: string; verified: boolean }> {
-    const verification = await this.emailVerificationModel.findOne({ email });
-
-    if (!verification) {
-      throw new BadRequestException(
-        'No verification code found for this email',
-      );
-    }
-
-    if (verification.verified) {
-      throw new BadRequestException('Email already verified');
-    }
-
-    if (new Date() > verification.expiresAt) {
-      throw new BadRequestException('Verification code has expired');
-    }
-
-    if (verification.code !== code) {
-      throw new BadRequestException('Invalid verification code');
-    }
-
-    // Mark as verified and then delete the code (no longer needed)
-    verification.verified = true;
-    await verification.save();
-
-    // Delete the verification code after successful verification
-    // This prevents code reuse and cleans up the database
-    await this.emailVerificationModel.deleteOne({ email });
-
-    this.logger.log(`Email verified and code deleted for: ${email}`);
-
-    return { message: 'Email verified successfully', verified: true };
+  if (!verification) {
+    throw new BadRequestException('No verification code found for this email');
   }
+
+  if (verification.verified) {
+    throw new BadRequestException('Email already verified');
+  }
+
+  if (new Date() > verification.expiresAt) {
+    throw new BadRequestException('Verification code has expired');
+  }
+
+  if (verification.code !== code) {
+    throw new BadRequestException('Invalid verification code');
+  }
+
+  // ✅ Mark as verified
+  verification.verified = true;
+
+  // ✅ Delete after 10 minutes from successful verification
+  verification.deleteAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await verification.save();
+
+  this.logger.log(`Email verified. Code will be deleted after 10 minutes for: ${email}`);
+
+  return { message: 'Email verified successfully', verified: true };
+}
+
 
   async handleOAuthCallback(
     provider: 'google' | 'facebook' | 'twitter',
