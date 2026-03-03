@@ -79,11 +79,14 @@ import { MongodbFallbackService } from './mongodb-fallback.service';
           uri,
           retryWrites: true,
           w: 'majority',
-          serverSelectionTimeoutMS: 5000,
+          serverSelectionTimeoutMS: 10000,
           socketTimeoutMS: 45000,
-          connectTimeoutMS: 10000,
-          maxPoolSize: 10,
-          minPoolSize: 1,
+          connectTimeoutMS: 15000,
+          maxPoolSize: 20,
+          minPoolSize: 2,
+          maxIdleTimeMS: 30000,
+          compressors: ['zlib'],
+          autoIndex: process.env.NODE_ENV !== 'production',
         };
 
         // Add SSL options for Atlas

@@ -2,12 +2,32 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AuctionsService } from './auctions/auctions.service';
+import compression from 'compression';
+import helmet from 'helmet';
+
+const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
   try {
-    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+      logger: process.env.NODE_ENV === 'production'
+        ? ['error', 'warn', 'log']
+        : ['error', 'warn', 'log', 'debug', 'verbose'],
+    });
+
+    // Security headers
+    app.use(helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: false, // Disable CSP to allow API usage from any frontend
+    }));
+
+    // Gzip compression - reduces response sizes by ~70%
+    app.use(compression({
+      threshold: 1024, // Only compress responses > 1KB
+      level: 6, // Balanced compression level
+    }));
 
     // Global Validation Pipe - validates all incoming requests
     app.useGlobalPipes(
@@ -27,6 +47,9 @@ async function bootstrap() {
       'http://localhost:4300',
       'https://mazzady.com',
       'https://www.mazzady.com',
+      'https://mazzady.vercel.app',
+      'https://mazzady-frontend.vercel.app',
+      'https://mazzadi-frontend.vercel.app',
       process.env.FRONTEND_URL,
     ].filter(Boolean);
 
@@ -56,12 +79,18 @@ async function bootstrap() {
       ],
     });
 
-    // Serve static files from uploads directory
+    // Serve static files from uploads directory with caching
     app.useStaticAssets(join(__dirname, '..', 'uploads'), {
       prefix: '/uploads',
+      maxAge: '1d', // Cache static files for 1 day
+      etag: true,
+      lastModified: true,
     });
+
     const port = process.env.PORT ?? 3000;
     await app.listen(port);
+    logger.log(`Application running on port ${port}`);
+    logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
     // Schedule auction status updates every minute
     const auctionsService = app.get(AuctionsService);
@@ -73,6 +102,7 @@ async function bootstrap() {
       }
     }, 60000); // Every minute
   } catch (error) {
+    logger.error('Failed to start application', error);
     process.exit(1);
   }
 }
