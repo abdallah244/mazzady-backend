@@ -12,22 +12,27 @@ const logger = new Logger('Bootstrap');
 async function bootstrap() {
   try {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-      logger: process.env.NODE_ENV === 'production'
-        ? ['error', 'warn', 'log']
-        : ['error', 'warn', 'log', 'debug', 'verbose'],
+      logger:
+        process.env.NODE_ENV === 'production'
+          ? ['error', 'warn', 'log']
+          : ['error', 'warn', 'log', 'debug', 'verbose'],
     });
 
     // Security headers
-    app.use(helmet({
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
-      contentSecurityPolicy: false, // Disable CSP to allow API usage from any frontend
-    }));
+    app.use(
+      helmet({
+        crossOriginResourcePolicy: { policy: 'cross-origin' },
+        contentSecurityPolicy: false, // Disable CSP to allow API usage from any frontend
+      }),
+    );
 
     // Gzip compression - reduces response sizes by ~70%
-    app.use(compression({
-      threshold: 1024, // Only compress responses > 1KB
-      level: 6, // Balanced compression level
-    }));
+    app.use(
+      compression({
+        threshold: 1024, // Only compress responses > 1KB
+        level: 6, // Balanced compression level
+      }),
+    );
 
     // Global Validation Pipe - validates all incoming requests
     app.useGlobalPipes(

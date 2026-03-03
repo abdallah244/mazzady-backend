@@ -31,7 +31,8 @@ export class AppController {
       database: dbStates[dbState] || 'unknown',
       memory: {
         rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
-        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        heapUsed:
+          Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
       },
     };
   }
