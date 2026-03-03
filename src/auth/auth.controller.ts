@@ -191,9 +191,100 @@ export class AuthController {
       middleName?: string;
       lastName?: string;
       phone?: string;
+      nickname?: string;
+      nationalId?: string;
     },
   ) {
     return this.authService.updateProfile(userId, body);
+  }
+
+  @Post('profile/:userId/national-id')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'nationalIdFront', maxCount: 1 },
+        { name: 'nationalIdBack', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: (req, file, cb) => {
+            const uploadPath = './uploads/national-ids';
+            if (!existsSync(uploadPath)) {
+              mkdirSync(uploadPath, { recursive: true });
+            }
+            cb(null, uploadPath);
+          },
+          filename: (req, file, cb) => {
+            const uniqueSuffix =
+              Date.now() + '-' + Math.round(Math.random() * 1e9);
+            const ext = extname(file.originalname);
+            cb(null, `nid-${uniqueSuffix}${ext}`);
+          },
+        }),
+        fileFilter: (req, file, cb) => {
+          if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+          } else {
+            cb(
+              new BadRequestException(
+                'Only image files are allowed for national ID',
+              ) as unknown as Error,
+              false,
+            );
+          }
+        },
+        limits: {
+          fileSize: 2 * 1024 * 1024,
+        },
+      },
+    ),
+  )
+  async uploadNationalId(
+    @Param('userId') userId: string,
+    @UploadedFiles()
+    files: {
+      nationalIdFront?: Array<{
+        filename: string;
+        path: string;
+        mimetype: string;
+        size: number;
+      }>;
+      nationalIdBack?: Array<{
+        filename: string;
+        path: string;
+        mimetype: string;
+        size: number;
+      }>;
+    },
+  ) {
+    const frontFile = files?.nationalIdFront?.[0];
+    const backFile = files?.nationalIdBack?.[0];
+
+    if (!frontFile || !backFile) {
+      throw new BadRequestException(
+        'Front and back national ID images are required',
+      );
+    }
+
+    return this.authService.uploadNationalIdImages(userId, {
+      frontUrl: `/uploads/national-ids/${frontFile.filename}`,
+      backUrl: `/uploads/national-ids/${backFile.filename}`,
+      frontFilename: frontFile.filename,
+      backFilename: backFile.filename,
+    });
+  }
+
+  @Post('profile/:userId/verify-email')
+  async verifyProfileEmail(@Param('userId') userId: string) {
+    return this.authService.markEmailVerified(userId);
+  }
+
+  @Post('profile/:userId/confirm-email')
+  async confirmProfileEmail(
+    @Param('userId') userId: string,
+    @Body() body: { code: string },
+  ) {
+    return this.authService.confirmEmailVerification(userId, body.code);
   }
 
   @Post('profile/:userId/avatar')

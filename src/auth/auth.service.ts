@@ -294,42 +294,45 @@ export class AuthService {
 
     return { message: 'Verification code sent to email' };
   }
-  
-async verifyEmailCode(
-  email: string,
-  code: string,
-): Promise<{ message: string; verified: boolean }> {
-  const verification = await this.emailVerificationModel.findOne({ email });
 
-  if (!verification) {
-    throw new BadRequestException('No verification code found for this email');
+  async verifyEmailCode(
+    email: string,
+    code: string,
+  ): Promise<{ message: string; verified: boolean }> {
+    const verification = await this.emailVerificationModel.findOne({ email });
+
+    if (!verification) {
+      throw new BadRequestException(
+        'No verification code found for this email',
+      );
+    }
+
+    if (verification.verified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    if (new Date() > verification.expiresAt) {
+      throw new BadRequestException('Verification code has expired');
+    }
+
+    if (verification.code !== code) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    // ✅ Mark as verified
+    verification.verified = true;
+
+    // ✅ Delete after 10 minutes from successful verification
+    verification.deleteAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await verification.save();
+
+    this.logger.log(
+      `Email verified. Code will be deleted after 10 minutes for: ${email}`,
+    );
+
+    return { message: 'Email verified successfully', verified: true };
   }
-
-  if (verification.verified) {
-    throw new BadRequestException('Email already verified');
-  }
-
-  if (new Date() > verification.expiresAt) {
-    throw new BadRequestException('Verification code has expired');
-  }
-
-  if (verification.code !== code) {
-    throw new BadRequestException('Invalid verification code');
-  }
-
-  // ✅ Mark as verified
-  verification.verified = true;
-
-  // ✅ Delete after 10 minutes from successful verification
-  verification.deleteAt = new Date(Date.now() + 10 * 60 * 1000);
-
-  await verification.save();
-
-  this.logger.log(`Email verified. Code will be deleted after 10 minutes for: ${email}`);
-
-  return { message: 'Email verified successfully', verified: true };
-}
-
 
   async googleSignIn(credential: string): Promise<any> {
     try {
@@ -349,7 +352,13 @@ async verifyEmailCode(
         throw new BadRequestException('Token was not issued for this app');
       }
 
-      const { email, given_name, family_name, sub: googleId, picture } = payload;
+      const {
+        email,
+        given_name,
+        family_name,
+        sub: googleId,
+        picture,
+      } = payload;
 
       if (!email) {
         throw new BadRequestException('Google account has no email');
@@ -839,6 +848,10 @@ async verifyEmailCode(
       nationalIdFrontUrl: user.nationalIdFrontUrl,
       nationalIdBackUrl: user.nationalIdBackUrl,
       walletBalance: user.walletBalance || 0,
+      authProvider: user.authProvider || 'local',
+      isProfileComplete: user.isProfileComplete,
+      nicknameChanged: user.nicknameChanged || false,
+      emailVerified: user.emailVerified || false,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -851,6 +864,8 @@ async verifyEmailCode(
       middleName?: string;
       lastName?: string;
       phone?: string;
+      nickname?: string;
+      nationalId?: string;
     },
   ): Promise<any> {
     const user = await this.userModel.findById(userId);
@@ -861,7 +876,7 @@ async verifyEmailCode(
     if (updates.firstName) {
       user.firstName = updates.firstName;
     }
-    if (updates.middleName) {
+    if (updates.middleName !== undefined) {
       user.middleName = updates.middleName;
     }
     if (updates.lastName) {
@@ -877,6 +892,46 @@ async verifyEmailCode(
         throw new ConflictException('Phone number already in use');
       }
       user.phone = updates.phone;
+    }
+
+    // Allow one-time nickname change for OAuth users
+    if (updates.nickname && updates.nickname !== user.nickname) {
+      if (user.nicknameChanged) {
+        throw new BadRequestException('Nickname can only be changed once');
+      }
+      const existingNickname = await this.userModel.findOne({
+        nickname: updates.nickname,
+        _id: { $ne: userId },
+      });
+      if (existingNickname) {
+        throw new ConflictException('Nickname already in use');
+      }
+      user.nickname = updates.nickname;
+      user.nicknameChanged = true;
+    }
+
+    // Allow OAuth users to add national ID
+    if (updates.nationalId && !user.nationalId) {
+      const normalizedNationalId = updates.nationalId.replace(/\s+/g, '').replace(/-/g, '');
+      const egyptianNationalIdRegex = /^[23]\d{13}$/;
+      if (!egyptianNationalIdRegex.test(normalizedNationalId)) {
+        throw new BadRequestException('Invalid Egyptian National ID format');
+      }
+      const existingNationalId = await this.userModel.findOne({
+        nationalId: normalizedNationalId,
+        _id: { $ne: userId },
+      });
+      if (existingNationalId) {
+        throw new ConflictException('National ID already in use');
+      }
+      user.nationalId = normalizedNationalId;
+    }
+
+    // Check if profile is now complete
+    if (user.authProvider !== 'local' && !user.isProfileComplete) {
+      if (user.phone && user.nationalId && user.nationalIdFrontUrl && user.nationalIdBackUrl) {
+        user.isProfileComplete = true;
+      }
     }
 
     await user.save();
@@ -911,5 +966,72 @@ async verifyEmailCode(
     await user.save();
 
     return this.getProfile(userId);
+  }
+
+  async uploadNationalIdImages(
+    userId: string,
+    images: {
+      frontUrl: string;
+      backUrl: string;
+      frontFilename: string;
+      backFilename: string;
+    },
+  ): Promise<any> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Only allow if no national ID images exist yet (one-time upload)
+    if (user.nationalIdFrontUrl || user.nationalIdBackUrl) {
+      throw new BadRequestException('National ID images already uploaded');
+    }
+
+    user.nationalIdFrontUrl = images.frontUrl;
+    user.nationalIdFrontFilename = images.frontFilename;
+    user.nationalIdBackUrl = images.backUrl;
+    user.nationalIdBackFilename = images.backFilename;
+
+    // Check if profile is now complete
+    if (user.authProvider !== 'local' && !user.isProfileComplete) {
+      if (user.phone && user.nationalId && user.nationalIdFrontUrl && user.nationalIdBackUrl) {
+        user.isProfileComplete = true;
+      }
+    }
+
+    await user.save();
+    return this.getProfile(userId);
+  }
+
+  async markEmailVerified(userId: string): Promise<any> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    // Send verification code
+    await this.sendVerificationCode(user.email, true);
+
+    return { message: 'Verification code sent to email' };
+  }
+
+  async confirmEmailVerification(userId: string, code: string): Promise<any> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const result = await this.verifyEmailCode(user.email, code);
+
+    if (result.verified) {
+      user.emailVerified = true;
+      await user.save();
+    }
+
+    return { ...result, emailVerified: true };
   }
 }
