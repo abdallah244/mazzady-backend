@@ -84,12 +84,19 @@ async function bootstrap() {
       ],
     });
 
-    // Serve static files from uploads directory with caching
+    // Serve static files from uploads directory with aggressive caching
     app.useStaticAssets(join(__dirname, '..', 'uploads'), {
       prefix: '/uploads',
-      maxAge: '1d', // Cache static files for 1 day
+      maxAge: '7d', // Cache static files for 7 days
       etag: true,
       lastModified: true,
+      immutable: true, // Tell browsers the file won't change
+      setHeaders: (res, path) => {
+        // Extra-long cache for home page images (they rarely change)
+        if (path.includes('/home/')) {
+          res.setHeader('Cache-Control', 'public, max-age=2592000, immutable'); // 30 days
+        }
+      },
     });
 
     const port = process.env.PORT ?? 3000;

@@ -8,6 +8,7 @@ import {
   UploadedFile,
   BadRequestException,
   Res,
+  Header,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -81,6 +82,7 @@ export class HomeController {
   }
 
   @Get('images')
+  @Header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
   async getAllImages() {
     const images = await this.homeService.getImages();
     return {
@@ -95,6 +97,7 @@ export class HomeController {
   }
 
   @Get('images/:section')
+  @Header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
   async getImagesBySection(@Param('section') section: string) {
     if (section !== 'hero' && section !== 'howItWorks') {
       throw new BadRequestException('Invalid section. Must be "hero" or "howItWorks"');
