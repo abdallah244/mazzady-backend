@@ -432,6 +432,114 @@ async verifyEmailCode(
     }
   }
 
+  async facebookSignIn(accessToken: string): Promise<any> {
+    try {
+      // Verify the access token with Facebook and get user info
+      const response = await fetch(
+        `https://graph.facebook.com/me?fields=id,name,email,first_name,last_name,picture.type(large)&access_token=${accessToken}`,
+      );
+      const fbUser = await response.json();
+
+      if (fbUser.error) {
+        throw new BadRequestException(
+          `Facebook token error: ${fbUser.error.message}`,
+        );
+      }
+
+      // Verify the token belongs to our app
+      const debugResponse = await fetch(
+        `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${process.env.FACEBOOK_APP_ID}|${process.env.FACEBOOK_APP_SECRET}`,
+      );
+      const debugData = await debugResponse.json();
+
+      if (!debugData.data?.is_valid) {
+        throw new BadRequestException('Invalid Facebook access token');
+      }
+
+      const email = fbUser.email;
+      if (!email) {
+        throw new BadRequestException(
+          'Facebook account has no email. Please allow email permission.',
+        );
+      }
+
+      // Check if user already exists
+      let user = await this.userModel.findOne({ email });
+
+      if (user) {
+        if (!user.oauthId) {
+          user.oauthId = fbUser.id;
+          user.authProvider = 'facebook';
+        }
+        user.isOnline = true;
+        user.lastActivity = new Date();
+        user.visitsThisMonth = (user.visitsThisMonth || 0) + 1;
+        await user.save();
+      } else {
+        // New user
+        const baseNickname = (email.split('@')[0] || 'user')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
+        let nickname = baseNickname;
+        let counter = 1;
+        while (await this.userModel.findOne({ nickname })) {
+          nickname = `${baseNickname}${counter}`;
+          counter++;
+          if (counter > 100) {
+            nickname = `${baseNickname}${Date.now()}`;
+            break;
+          }
+        }
+
+        const pictureUrl = fbUser.picture?.data?.url || '';
+
+        user = new this.userModel({
+          email,
+          password: '',
+          firstName: fbUser.first_name || 'User',
+          middleName: '',
+          lastName: fbUser.last_name || '',
+          nickname,
+          phone: '',
+          nationalId: '',
+          authProvider: 'facebook',
+          oauthId: fbUser.id,
+          isProfileComplete: false,
+          profileImageUrl: pictureUrl,
+        });
+
+        await user.save();
+        this.logger.log(`New Facebook user created: ${email}`);
+      }
+
+      const tokens = this.generateTokens(user);
+
+      return {
+        message: 'Facebook sign-in successful',
+        ...tokens,
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          firstName: user.firstName,
+          middleName: user.middleName,
+          lastName: user.lastName,
+          nickname: user.nickname,
+          phone: user.phone,
+          isProfileComplete: user.isProfileComplete,
+          profileImageUrl: user.profileImageUrl,
+        },
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error('Facebook sign-in failed', error);
+      throw new BadRequestException(
+        `Facebook sign-in failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
   async handleOAuthCallback(
     provider: 'google' | 'facebook' | 'twitter',
     code: string,

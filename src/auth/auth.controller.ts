@@ -36,6 +36,7 @@ import {
   VerifyOAuthCodeDto,
   RefreshTokenDto,
   GoogleSignInDto,
+  FacebookSignInDto,
 } from './dto/auth.dto';
 
 @Controller('auth')
@@ -289,6 +290,11 @@ export class AuthController {
   @Post('google-signin')
   async googleSignIn(@Body() body: GoogleSignInDto) {
     return this.authService.googleSignIn(body.credential);
+  }
+
+  @Post('facebook-signin')
+  async facebookSignIn(@Body() body: FacebookSignInDto) {
+    return this.authService.facebookSignIn(body.accessToken);
   }
 
   @Get('google')
