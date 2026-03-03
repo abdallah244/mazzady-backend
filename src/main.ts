@@ -52,6 +52,8 @@ async function bootstrap() {
       'http://localhost:4300',
       'https://mazzady.com',
       'https://www.mazzady.com',
+      'https://mazzady.works',
+      'https://www.mazzady.works',
       'https://mazzady.vercel.app',
       'https://mazzady-frontend.vercel.app',
       'https://mazzadi-frontend.vercel.app',
