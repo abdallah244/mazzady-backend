@@ -32,7 +32,8 @@ export class HomeController {
       storage: diskStorage({
         destination: './uploads/home',
         filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
           cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
         },
@@ -42,7 +43,10 @@ export class HomeController {
       },
       fileFilter: (req, file, cb) => {
         if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
-          return cb(new BadRequestException('Only image files are allowed!'), false);
+          return cb(
+            new BadRequestException('Only image files are allowed!'),
+            false,
+          );
         }
         cb(null, true);
       },
@@ -57,7 +61,9 @@ export class HomeController {
     }
 
     if (section !== 'hero' && section !== 'howItWorks') {
-      throw new BadRequestException('Invalid section. Must be "hero" or "howItWorks"');
+      throw new BadRequestException(
+        'Invalid section. Must be "hero" or "howItWorks"',
+      );
     }
 
     const url = `/uploads/home/${file.filename}`;
@@ -100,9 +106,13 @@ export class HomeController {
   @Header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
   async getImagesBySection(@Param('section') section: string) {
     if (section !== 'hero' && section !== 'howItWorks') {
-      throw new BadRequestException('Invalid section. Must be "hero" or "howItWorks"');
+      throw new BadRequestException(
+        'Invalid section. Must be "hero" or "howItWorks"',
+      );
     }
-    const images = await this.homeService.getImages(section as 'hero' | 'howItWorks');
+    const images = await this.homeService.getImages(
+      section as 'hero' | 'howItWorks',
+    );
     return {
       success: true,
       images: images.map((img) => ({
@@ -120,4 +130,3 @@ export class HomeController {
     return { success: true, message: 'Image deleted successfully' };
   }
 }
-

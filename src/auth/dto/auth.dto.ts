@@ -126,3 +126,9 @@ export class RefreshTokenDto {
   @IsNotEmpty({ message: 'Refresh token is required' })
   refreshToken!: string;
 }
+
+export class GoogleSignInDto {
+  @IsString({ message: 'Google credential is required' })
+  @IsNotEmpty({ message: 'Google credential is required' })
+  credential!: string;
+}

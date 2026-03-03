@@ -331,6 +331,107 @@ async verifyEmailCode(
 }
 
 
+  async googleSignIn(credential: string): Promise<any> {
+    try {
+      // Verify the Google ID token
+      const ticket = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`,
+      );
+      const payload = await ticket.json();
+
+      if (payload.error) {
+        throw new BadRequestException('Invalid Google token');
+      }
+
+      // Verify the audience matches our client ID
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      if (payload.aud !== clientId) {
+        throw new BadRequestException('Token was not issued for this app');
+      }
+
+      const { email, given_name, family_name, sub: googleId, picture } = payload;
+
+      if (!email) {
+        throw new BadRequestException('Google account has no email');
+      }
+
+      // Check if user already exists
+      let user = await this.userModel.findOne({ email });
+
+      if (user) {
+        // Existing user - update OAuth info if needed
+        if (!user.oauthId) {
+          user.oauthId = googleId;
+          user.authProvider = 'google';
+        }
+        user.isOnline = true;
+        user.lastActivity = new Date();
+        user.visitsThisMonth = (user.visitsThisMonth || 0) + 1;
+        await user.save();
+      } else {
+        // New user - create account
+        const baseNickname = (email.split('@')[0] || 'user')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
+        let nickname = baseNickname;
+        let counter = 1;
+        while (await this.userModel.findOne({ nickname })) {
+          nickname = `${baseNickname}${counter}`;
+          counter++;
+          if (counter > 100) {
+            nickname = `${baseNickname}${Date.now()}`;
+            break;
+          }
+        }
+
+        user = new this.userModel({
+          email,
+          password: '',
+          firstName: given_name || 'User',
+          middleName: '',
+          lastName: family_name || '',
+          nickname,
+          phone: '',
+          nationalId: '',
+          authProvider: 'google',
+          oauthId: googleId,
+          isProfileComplete: false,
+          profileImageUrl: picture || '',
+        });
+
+        await user.save();
+        this.logger.log(`New Google user created: ${email}`);
+      }
+
+      // Generate JWT tokens
+      const tokens = this.generateTokens(user);
+
+      return {
+        message: 'Google sign-in successful',
+        ...tokens,
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          firstName: user.firstName,
+          middleName: user.middleName,
+          lastName: user.lastName,
+          nickname: user.nickname,
+          phone: user.phone,
+          isProfileComplete: user.isProfileComplete,
+          profileImageUrl: user.profileImageUrl,
+        },
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error('Google sign-in failed', error);
+      throw new BadRequestException(
+        `Google sign-in failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
   async handleOAuthCallback(
     provider: 'google' | 'facebook' | 'twitter',
     code: string,

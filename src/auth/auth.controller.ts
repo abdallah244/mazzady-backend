@@ -35,6 +35,7 @@ import {
   VerifyEmailCodeDto,
   VerifyOAuthCodeDto,
   RefreshTokenDto,
+  GoogleSignInDto,
 } from './dto/auth.dto';
 
 @Controller('auth')
@@ -283,6 +284,11 @@ export class AuthController {
         `Failed to verify OAuth code: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
+  }
+
+  @Post('google-signin')
+  async googleSignIn(@Body() body: GoogleSignInDto) {
+    return this.authService.googleSignIn(body.credential);
   }
 
   @Get('google')
