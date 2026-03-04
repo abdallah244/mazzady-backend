@@ -19,10 +19,14 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { MoneyRequestsService } from './money-requests.service';
 import { AdminGuard } from '../auth/admin.guard';
+import { ImageCompressionService } from '../image-compression.service';
 
 @Controller('money-requests')
 export class MoneyRequestsController {
-  constructor(private readonly moneyRequestsService: MoneyRequestsService) {}
+  constructor(
+    private readonly moneyRequestsService: MoneyRequestsService,
+    private readonly imageCompression: ImageCompressionService,
+  ) {}
 
   @Post()
   @UseInterceptors(
@@ -66,8 +70,10 @@ export class MoneyRequestsController {
       throw new Error('Invalid amount');
     }
 
-    const depositImageUrl = `/uploads/deposits/${file.filename}`;
-    const depositImageFilename = file.filename;
+    // Compress deposit proof image
+    const compressed = await this.imageCompression.compressProductImage(file.path);
+    const depositImageUrl = `/uploads/deposits/${compressed.newFilename}`;
+    const depositImageFilename = compressed.newFilename;
 
     const request = await this.moneyRequestsService.createRequest(
       userId,

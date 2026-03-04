@@ -27,6 +27,7 @@ import type { Request, Response } from 'express';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { ImageCompressionService } from '../image-compression.service';
 import { Public } from './public.decorator';
 import {
   RegisterDto,
@@ -41,7 +42,10 @@ import {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly imageCompression: ImageCompressionService,
+  ) {}
 
   @Post('register')
   @UseInterceptors(
@@ -111,8 +115,12 @@ export class AuthController {
       );
     }
 
-    const frontUrl = `/uploads/national-ids/${frontFile.filename}`;
-    const backUrl = `/uploads/national-ids/${backFile.filename}`;
+    // Compress national ID images
+    const frontCompressed = await this.imageCompression.compressNationalId(frontFile.path);
+    const backCompressed = await this.imageCompression.compressNationalId(backFile.path);
+
+    const frontUrl = `/uploads/national-ids/${frontCompressed.newFilename}`;
+    const backUrl = `/uploads/national-ids/${backCompressed.newFilename}`;
 
     return this.authService.register(
       registerDto.email,
@@ -126,8 +134,8 @@ export class AuthController {
       {
         frontUrl,
         backUrl,
-        frontFilename: frontFile.filename,
-        backFilename: backFile.filename,
+        frontFilename: frontCompressed.newFilename,
+        backFilename: backCompressed.newFilename,
       },
     );
   }
@@ -266,11 +274,15 @@ export class AuthController {
       );
     }
 
+    // Compress national ID images
+    const frontCompressed = await this.imageCompression.compressNationalId(frontFile.path);
+    const backCompressed = await this.imageCompression.compressNationalId(backFile.path);
+
     return this.authService.uploadNationalIdImages(userId, {
-      frontUrl: `/uploads/national-ids/${frontFile.filename}`,
-      backUrl: `/uploads/national-ids/${backFile.filename}`,
-      frontFilename: frontFile.filename,
-      backFilename: backFile.filename,
+      frontUrl: `/uploads/national-ids/${frontCompressed.newFilename}`,
+      backUrl: `/uploads/national-ids/${backCompressed.newFilename}`,
+      frontFilename: frontCompressed.newFilename,
+      backFilename: backCompressed.newFilename,
     });
   }
 
@@ -318,8 +330,11 @@ export class AuthController {
     if (!file) {
       throw new BadRequestException('Avatar image is required');
     }
-    const avatarUrl = `/uploads/profiles/${file.filename}`;
-    const avatarFilename = file.filename;
+
+    // Compress avatar
+    const compressed = await this.imageCompression.compressAvatar(file.path);
+    const avatarUrl = `/uploads/profiles/${compressed.newFilename}`;
+    const avatarFilename = compressed.newFilename;
     return this.authService.updateProfileAvatar(
       userId,
       avatarUrl,

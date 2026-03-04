@@ -7,6 +7,7 @@ import { Product, ProductSchema } from '../schemas/product.schema';
 import { AuctionProductsController } from './auction-products.controller';
 import { AuctionProductsService } from './auction-products.service';
 import { AuctionsService } from '../auctions/auctions.service';
+import { ImageCompressionService } from '../image-compression.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { AuctionsService } from '../auctions/auctions.service';
     ]),
   ],
   controllers: [AuctionProductsController],
-  providers: [AuctionProductsService, AuctionsService],
+  providers: [AuctionProductsService, AuctionsService, ImageCompressionService],
 })
 export class AuctionProductsModule {}
 

@@ -14,6 +14,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProductsService } from './products.service';
 import { AdminGuard } from '../auth/admin.guard';
+import { ImageCompressionService } from '../image-compression.service';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
@@ -31,7 +32,10 @@ interface MulterFile {
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly imageCompression: ImageCompressionService,
+  ) {}
 
   @Post()
   @UseGuards(AdminGuard)
@@ -62,8 +66,11 @@ export class ProductsController {
     if (!file) {
       throw new BadRequestException('Product image is required');
     }
-    const imageUrl = `/uploads/products/${file.filename}`;
-    const imageFilename = file.filename;
+
+    // Compress product image
+    const compressed = await this.imageCompression.compressProductImage(file.path);
+    const imageUrl = `/uploads/products/${compressed.newFilename}`;
+    const imageFilename = compressed.newFilename;
     return this.productsService.createProduct(
       body.productName,
       parseFloat(body.price),

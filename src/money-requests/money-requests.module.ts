@@ -4,6 +4,7 @@ import { MoneyRequest, MoneyRequestSchema } from '../schemas/money-request.schem
 import { User, UserSchema } from '../schemas/user.schema';
 import { MoneyRequestsController } from './money-requests.controller';
 import { MoneyRequestsService } from './money-requests.service';
+import { ImageCompressionService } from '../image-compression.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { MoneyRequestsService } from './money-requests.service';
     ]),
   ],
   controllers: [MoneyRequestsController],
-  providers: [MoneyRequestsService],
+  providers: [MoneyRequestsService, ImageCompressionService],
   exports: [MoneyRequestsService],
 })
 export class MoneyRequestsModule {}

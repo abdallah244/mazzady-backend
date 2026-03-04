@@ -40,7 +40,11 @@ export class AuctionProductsService {
   ): Promise<AuctionProductDocument> {
     // Check if OAuth user has completed their profile
     const seller = await this.userModel.findById(userId);
-    if (seller && seller.authProvider !== 'local' && !seller.isProfileComplete) {
+    if (
+      seller &&
+      seller.authProvider !== 'local' &&
+      !seller.isProfileComplete
+    ) {
       throw new ForbiddenException(
         'يجب إكمال بيانات التحقق في صفحة الملف الشخصي قبل إنشاء مزاد | Please complete your profile verification before creating an auction',
       );

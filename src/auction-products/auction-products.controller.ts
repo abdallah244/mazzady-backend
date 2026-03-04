@@ -17,11 +17,13 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AuctionProductsService } from './auction-products.service';
 import { AdminGuard } from '../auth/admin.guard';
+import { ImageCompressionService } from '../image-compression.service';
 
 @Controller('auction-products')
 export class AuctionProductsController {
   constructor(
     private readonly auctionProductsService: AuctionProductsService,
+    private readonly imageCompression: ImageCompressionService,
   ) {}
 
   @Post()
@@ -85,14 +87,21 @@ export class AuctionProductsController {
     const mainImage = files[0];
     const additionalImages = files.slice(1);
 
-    const mainImageUrl = `/uploads/auction-products/${mainImage.filename}`;
-    const mainImageFilename = mainImage.filename;
-
-    const additionalImagesUrl = additionalImages.map(
-      (img) => `/uploads/auction-products/${img.filename}`,
+    // Compress all images
+    const mainCompressed = await this.imageCompression.compressProductImage(mainImage.path);
+    const additionalCompressed = await this.imageCompression.compressImages(
+      additionalImages.map((img) => img.path),
+      { maxWidth: 1200, maxHeight: 1200, quality: 75 },
     );
-    const additionalImagesFilename = additionalImages.map(
-      (img) => img.filename,
+
+    const mainImageUrl = `/uploads/auction-products/${mainCompressed.newFilename}`;
+    const mainImageFilename = mainCompressed.newFilename;
+
+    const additionalImagesUrl = additionalCompressed.map(
+      (img) => `/uploads/auction-products/${img.newFilename}`,
+    );
+    const additionalImagesFilename = additionalCompressed.map(
+      (img) => img.newFilename,
     );
 
     const minBidIncrement = body.minBidIncrement

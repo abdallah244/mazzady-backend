@@ -37,6 +37,7 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
 import { PromotedAuctionsModule } from './promoted-auctions/promoted-auctions.module';
 import { SellerLikesModule } from './seller-likes/seller-likes.module';
 import { MongodbFallbackService } from './mongodb-fallback.service';
+import { ImageCompressionService } from './image-compression.service';
 
 @Module({
   imports: [
@@ -136,6 +137,7 @@ import { MongodbFallbackService } from './mongodb-fallback.service';
   providers: [
     AppService,
     MongodbFallbackService,
+    ImageCompressionService,
     // Global Rate Limiting Guard
     {
       provide: APP_GUARD,

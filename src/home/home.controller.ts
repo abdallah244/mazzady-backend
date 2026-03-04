@@ -15,10 +15,14 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { HomeService } from './home.service';
+import { ImageCompressionService } from '../image-compression.service';
 
 @Controller('home')
 export class HomeController {
-  constructor(private readonly homeService: HomeService) {
+  constructor(
+    private readonly homeService: HomeService,
+    private readonly imageCompression: ImageCompressionService,
+  ) {
     // Create uploads directory if it doesn't exist
     const uploadsDir = './uploads/home';
     if (!existsSync(uploadsDir)) {
@@ -66,14 +70,16 @@ export class HomeController {
       );
     }
 
-    const url = `/uploads/home/${file.filename}`;
+    // Compress home/banner image
+    const compressed = await this.imageCompression.compressHomeImage(file.path);
+    const url = `/uploads/home/${compressed.newFilename}`;
     const image = await this.homeService.saveImage(
       url,
       section as 'hero' | 'howItWorks',
-      file.filename,
+      compressed.newFilename,
       file.originalname,
-      file.mimetype,
-      file.size,
+      'image/webp',
+      0,
     );
 
     return {
