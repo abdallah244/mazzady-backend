@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
   AuctionProduct,
   AuctionProductDocument,
 } from '../schemas/auction-product.schema';
+import { User, UserDocument } from '../schemas/user.schema';
 import { AuctionsService } from '../auctions/auctions.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -16,6 +22,8 @@ export class AuctionProductsService {
   constructor(
     @InjectModel(AuctionProduct.name)
     private auctionProductModel: Model<AuctionProductDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
     private auctionsService: AuctionsService,
   ) {}
 
@@ -30,6 +38,14 @@ export class AuctionProductsService {
     minBidIncrement?: number,
     durationInSeconds?: number,
   ): Promise<AuctionProductDocument> {
+    // Check if OAuth user has completed their profile
+    const seller = await this.userModel.findById(userId);
+    if (seller && seller.authProvider !== 'local' && !seller.isProfileComplete) {
+      throw new ForbiddenException(
+        'يجب إكمال بيانات التحقق في صفحة الملف الشخصي قبل إنشاء مزاد | Please complete your profile verification before creating an auction',
+      );
+    }
+
     const product = new this.auctionProductModel({
       userId: new Types.ObjectId(userId) as any,
       productName,

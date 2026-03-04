@@ -912,7 +912,9 @@ export class AuthService {
 
     // Allow OAuth users to add national ID
     if (updates.nationalId && !user.nationalId) {
-      const normalizedNationalId = updates.nationalId.replace(/\s+/g, '').replace(/-/g, '');
+      const normalizedNationalId = updates.nationalId
+        .replace(/\s+/g, '')
+        .replace(/-/g, '');
       const egyptianNationalIdRegex = /^[23]\d{13}$/;
       if (!egyptianNationalIdRegex.test(normalizedNationalId)) {
         throw new BadRequestException('Invalid Egyptian National ID format');
@@ -929,7 +931,12 @@ export class AuthService {
 
     // Check if profile is now complete
     if (user.authProvider !== 'local' && !user.isProfileComplete) {
-      if (user.phone && user.nationalId && user.nationalIdFrontUrl && user.nationalIdBackUrl) {
+      if (
+        user.phone &&
+        user.nationalId &&
+        user.nationalIdFrontUrl &&
+        user.nationalIdBackUrl
+      ) {
         user.isProfileComplete = true;
       }
     }
@@ -994,7 +1001,12 @@ export class AuthService {
 
     // Check if profile is now complete
     if (user.authProvider !== 'local' && !user.isProfileComplete) {
-      if (user.phone && user.nationalId && user.nationalIdFrontUrl && user.nationalIdBackUrl) {
+      if (
+        user.phone &&
+        user.nationalId &&
+        user.nationalIdFrontUrl &&
+        user.nationalIdBackUrl
+      ) {
         user.isProfileComplete = true;
       }
     }
