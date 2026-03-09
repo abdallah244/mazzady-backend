@@ -17,6 +17,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { MoneyRequestsService } from './money-requests.service';
 import { AdminGuard } from '../auth/admin.guard';
 import { ImageCompressionService } from '../image-compression.service';
@@ -32,7 +33,13 @@ export class MoneyRequestsController {
   @UseInterceptors(
     FileInterceptor('depositImage', {
       storage: diskStorage({
-        destination: './uploads/deposits',
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/deposits';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -70,10 +77,11 @@ export class MoneyRequestsController {
       throw new Error('Invalid amount');
     }
 
-    // Compress deposit proof image
-    const compressed = await this.imageCompression.compressProductImage(file.path);
-    const depositImageUrl = `/uploads/deposits/${compressed.newFilename}`;
-    const depositImageFilename = compressed.newFilename;
+    // Compress deposit proof image and store in MongoDB
+    const depositImageUrl = await this.imageCompression.compressAndStoreProduct(
+      file.path,
+    );
+    const depositImageFilename = depositImageUrl;
 
     const request = await this.moneyRequestsService.createRequest(
       userId,

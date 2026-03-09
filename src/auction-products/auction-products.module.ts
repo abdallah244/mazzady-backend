@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AuctionProduct, AuctionProductSchema } from '../schemas/auction-product.schema';
+import {
+  AuctionProduct,
+  AuctionProductSchema,
+} from '../schemas/auction-product.schema';
 import { User, UserSchema } from '../schemas/user.schema';
 import { Auction, AuctionSchema } from '../schemas/auction.schema';
 import { Product, ProductSchema } from '../schemas/product.schema';
@@ -22,4 +25,3 @@ import { ImageCompressionService } from '../image-compression.service';
   providers: [AuctionProductsService, AuctionsService, ImageCompressionService],
 })
 export class AuctionProductsModule {}
-

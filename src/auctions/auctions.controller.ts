@@ -15,6 +15,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { AuctionsService } from './auctions.service';
 import { AdminGuard } from '../auth/admin.guard';
 import { ImageCompressionService } from '../image-compression.service';
@@ -41,7 +42,13 @@ export class AuctionsController {
   @UseInterceptors(
     FilesInterceptor('images', 10, {
       storage: diskStorage({
-        destination: './uploads/auctions',
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/auctions';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -91,22 +98,17 @@ export class AuctionsController {
     const mainImage = files[0];
     const additionalImages = files.slice(1, 10);
 
-    // Compress all images
-    const mainCompressed = await this.imageCompression.compressProductImage(mainImage.path);
-    const additionalCompressed = await this.imageCompression.compressImages(
+    // Compress and store all images in MongoDB
+    const mainImageUrl = await this.imageCompression.compressAndStoreProduct(
+      mainImage.path,
+    );
+    const additionalImagesUrl = await this.imageCompression.compressAndStoreMultiple(
       additionalImages.map((file) => file.path),
       { maxWidth: 1200, maxHeight: 1200, quality: 75 },
     );
 
-    const mainImageUrl = `/uploads/auctions/${mainCompressed.newFilename}`;
-    const mainImageFilename = mainCompressed.newFilename;
-
-    const additionalImagesUrl = additionalCompressed.map(
-      (file) => `/uploads/auctions/${file.newFilename}`,
-    );
-    const additionalImagesFilename = additionalCompressed.map(
-      (file) => file.newFilename,
-    );
+    const mainImageFilename = mainImageUrl;
+    const additionalImagesFilename = additionalImagesUrl;
 
     const duration = parseInt(durationInSeconds, 10);
     const price = parseFloat(startingPrice);

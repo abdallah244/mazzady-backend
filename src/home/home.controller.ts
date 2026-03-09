@@ -70,13 +70,12 @@ export class HomeController {
       );
     }
 
-    // Compress home/banner image
-    const compressed = await this.imageCompression.compressHomeImage(file.path);
-    const url = `/uploads/home/${compressed.newFilename}`;
+    // Compress home/banner image and store in MongoDB
+    const url = await this.imageCompression.compressAndStoreHome(file.path);
     const image = await this.homeService.saveImage(
       url,
       section as 'hero' | 'howItWorks',
-      compressed.newFilename,
+      url,
       file.originalname,
       'image/webp',
       0,

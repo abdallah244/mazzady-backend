@@ -15,6 +15,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { AuctionProductsService } from './auction-products.service';
 import { AdminGuard } from '../auth/admin.guard';
 import { ImageCompressionService } from '../image-compression.service';
@@ -30,7 +31,13 @@ export class AuctionProductsController {
   @UseInterceptors(
     FilesInterceptor('images', 10, {
       storage: diskStorage({
-        destination: './uploads/auction-products',
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/auction-products';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -87,22 +94,17 @@ export class AuctionProductsController {
     const mainImage = files[0];
     const additionalImages = files.slice(1);
 
-    // Compress all images
-    const mainCompressed = await this.imageCompression.compressProductImage(mainImage.path);
-    const additionalCompressed = await this.imageCompression.compressImages(
+    // Compress and store all images in MongoDB
+    const mainImageUrl = await this.imageCompression.compressAndStoreProduct(
+      mainImage.path,
+    );
+    const additionalImagesUrl = await this.imageCompression.compressAndStoreMultiple(
       additionalImages.map((img) => img.path),
       { maxWidth: 1200, maxHeight: 1200, quality: 75 },
     );
 
-    const mainImageUrl = `/uploads/auction-products/${mainCompressed.newFilename}`;
-    const mainImageFilename = mainCompressed.newFilename;
-
-    const additionalImagesUrl = additionalCompressed.map(
-      (img) => `/uploads/auction-products/${img.newFilename}`,
-    );
-    const additionalImagesFilename = additionalCompressed.map(
-      (img) => img.newFilename,
-    );
+    const mainImageFilename = mainImageUrl;
+    const additionalImagesFilename = additionalImagesUrl;
 
     const minBidIncrement = body.minBidIncrement
       ? parseFloat(body.minBidIncrement.toString())

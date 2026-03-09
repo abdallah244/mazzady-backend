@@ -36,7 +36,13 @@ import { ImageCompressionService } from '../image-compression.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, EmailService, JwtStrategy, JwtAuthGuard, ImageCompressionService],
+  providers: [
+    AuthService,
+    EmailService,
+    JwtStrategy,
+    JwtAuthGuard,
+    ImageCompressionService,
+  ],
   exports: [AuthService, JwtModule, PassportModule, JwtAuthGuard],
 })
 export class AuthModule {}

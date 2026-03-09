@@ -4,13 +4,38 @@ import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AuctionsService } from './auctions/auctions.service';
+import { existsSync, mkdirSync } from 'fs';
 import compression from 'compression';
 import helmet from 'helmet';
 
 const logger = new Logger('Bootstrap');
 
+// Ensure all upload directories exist (critical for Heroku ephemeral FS)
+function ensureUploadDirs() {
+  const dirs = [
+    './uploads',
+    './uploads/national-ids',
+    './uploads/profiles',
+    './uploads/products',
+    './uploads/auction-products',
+    './uploads/auctions',
+    './uploads/deposits',
+    './uploads/home',
+    './uploads/cvs',
+  ];
+  for (const dir of dirs) {
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+      logger.log(`Created upload directory: ${dir}`);
+    }
+  }
+}
+
 async function bootstrap() {
   try {
+    // Ensure upload directories exist before starting
+    ensureUploadDirs();
+
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger:
         process.env.NODE_ENV === 'production'

@@ -17,6 +17,7 @@ import { AdminGuard } from '../auth/admin.guard';
 import { ImageCompressionService } from '../image-compression.service';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 interface MulterFile {
   fieldname: string;
@@ -42,7 +43,13 @@ export class ProductsController {
   @UseInterceptors(
     FileInterceptor('image', {
       storage: diskStorage({
-        destination: './uploads/products',
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/products';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
         filename: (req, file, cb) => {
           const randomName = Array(32)
             .fill(null)
@@ -53,7 +60,10 @@ export class ProductsController {
       }),
       fileFilter: (req, file, cb) => {
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-          return cb(new BadRequestException('Only image files are allowed!'), false);
+          return cb(
+            new BadRequestException('Only image files are allowed!'),
+            false,
+          );
         }
         cb(null, true);
       },
@@ -67,10 +77,11 @@ export class ProductsController {
       throw new BadRequestException('Product image is required');
     }
 
-    // Compress product image
-    const compressed = await this.imageCompression.compressProductImage(file.path);
-    const imageUrl = `/uploads/products/${compressed.newFilename}`;
-    const imageFilename = compressed.newFilename;
+    // Compress product image and store in MongoDB
+    const imageUrl = await this.imageCompression.compressAndStoreProduct(
+      file.path,
+    );
+    const imageFilename = imageUrl;
     return this.productsService.createProduct(
       body.productName,
       parseFloat(body.price),

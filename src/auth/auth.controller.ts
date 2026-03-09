@@ -115,12 +115,13 @@ export class AuthController {
       );
     }
 
-    // Compress national ID images
-    const frontCompressed = await this.imageCompression.compressNationalId(frontFile.path);
-    const backCompressed = await this.imageCompression.compressNationalId(backFile.path);
-
-    const frontUrl = `/uploads/national-ids/${frontCompressed.newFilename}`;
-    const backUrl = `/uploads/national-ids/${backCompressed.newFilename}`;
+    // Compress national ID images and store in MongoDB
+    const frontUrl = await this.imageCompression.compressAndStoreNationalId(
+      frontFile.path,
+    );
+    const backUrl = await this.imageCompression.compressAndStoreNationalId(
+      backFile.path,
+    );
 
     return this.authService.register(
       registerDto.email,
@@ -134,8 +135,8 @@ export class AuthController {
       {
         frontUrl,
         backUrl,
-        frontFilename: frontCompressed.newFilename,
-        backFilename: backCompressed.newFilename,
+        frontFilename: frontUrl,
+        backFilename: backUrl,
       },
     );
   }
@@ -274,15 +275,19 @@ export class AuthController {
       );
     }
 
-    // Compress national ID images
-    const frontCompressed = await this.imageCompression.compressNationalId(frontFile.path);
-    const backCompressed = await this.imageCompression.compressNationalId(backFile.path);
+    // Compress national ID images and store in MongoDB
+    const frontUrl = await this.imageCompression.compressAndStoreNationalId(
+      frontFile.path,
+    );
+    const backUrl = await this.imageCompression.compressAndStoreNationalId(
+      backFile.path,
+    );
 
     return this.authService.uploadNationalIdImages(userId, {
-      frontUrl: `/uploads/national-ids/${frontCompressed.newFilename}`,
-      backUrl: `/uploads/national-ids/${backCompressed.newFilename}`,
-      frontFilename: frontCompressed.newFilename,
-      backFilename: backCompressed.newFilename,
+      frontUrl,
+      backUrl,
+      frontFilename: frontUrl,
+      backFilename: backUrl,
     });
   }
 
@@ -303,7 +308,13 @@ export class AuthController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: './uploads/profiles',
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/profiles';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -331,14 +342,12 @@ export class AuthController {
       throw new BadRequestException('Avatar image is required');
     }
 
-    // Compress avatar
-    const compressed = await this.imageCompression.compressAvatar(file.path);
-    const avatarUrl = `/uploads/profiles/${compressed.newFilename}`;
-    const avatarFilename = compressed.newFilename;
+    // Compress avatar and store in MongoDB
+    const avatarUrl = await this.imageCompression.compressAndStoreAvatar(file.path);
     return this.authService.updateProfileAvatar(
       userId,
       avatarUrl,
-      avatarFilename,
+      avatarUrl,
     );
   }
 

@@ -25,4 +25,3 @@ import { ImageCompressionService } from '../image-compression.service';
   exports: [AuctionsService],
 })
 export class AuctionsModule {}
-

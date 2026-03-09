@@ -16,4 +16,3 @@ import { ImageCompressionService } from '../image-compression.service';
   exports: [HomeService],
 })
 export class HomeModule {}
-

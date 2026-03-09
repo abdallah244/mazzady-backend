@@ -38,6 +38,7 @@ import { PromotedAuctionsModule } from './promoted-auctions/promoted-auctions.mo
 import { SellerLikesModule } from './seller-likes/seller-likes.module';
 import { MongodbFallbackService } from './mongodb-fallback.service';
 import { ImageCompressionService } from './image-compression.service';
+import { ImageStoreModule } from './image-store/image-store.module';
 
 @Module({
   imports: [
@@ -132,6 +133,7 @@ import { ImageCompressionService } from './image-compression.service';
     RecommendationsModule,
     PromotedAuctionsModule,
     SellerLikesModule,
+    ImageStoreModule,
   ],
   controllers: [AppController],
   providers: [
