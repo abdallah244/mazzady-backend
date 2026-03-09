@@ -400,8 +400,8 @@ export class AuthService {
           middleName: '',
           lastName: family_name || '',
           nickname,
-          phone: '',
-          nationalId: '',
+          phone: undefined,
+          nationalId: undefined,
           authProvider: 'google',
           oauthId: googleId,
           isProfileComplete: false,
@@ -509,8 +509,8 @@ export class AuthService {
           middleName: '',
           lastName: fbUser.last_name || '',
           nickname,
-          phone: '',
-          nationalId: '',
+          phone: undefined,
+          nationalId: undefined,
           authProvider: 'facebook',
           oauthId: fbUser.id,
           isProfileComplete: false,
@@ -774,8 +774,8 @@ export class AuthService {
         middleName,
         lastName,
         nickname,
-        phone: '', // OAuth users might not have phone - will be asked to complete profile
-        nationalId: '', // OAuth users need to complete profile
+        phone: undefined, // OAuth users might not have phone - will be asked to complete profile
+        nationalId: undefined, // OAuth users need to complete profile
         authProvider: provider,
         isProfileComplete: false, // Mark as incomplete for OAuth users
       });

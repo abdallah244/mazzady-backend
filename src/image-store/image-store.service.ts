@@ -1,10 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import {
-  ImageStore,
-  ImageStoreDocument,
-} from '../schemas/image-store.schema';
+import { ImageStore, ImageStoreDocument } from '../schemas/image-store.schema';
 import * as fs from 'fs';
 
 @Injectable()

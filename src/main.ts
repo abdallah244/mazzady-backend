@@ -7,6 +7,7 @@ import { AuctionsService } from './auctions/auctions.service';
 import { existsSync, mkdirSync } from 'fs';
 import compression from 'compression';
 import helmet from 'helmet';
+import { getConnectionToken } from '@nestjs/mongoose';
 
 const logger = new Logger('Bootstrap');
 
@@ -130,6 +131,30 @@ async function bootstrap() {
     await app.listen(port);
     logger.log(`Application running on port ${port}`);
     logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // One-time migration: fix OAuth users with empty string phone/nationalId
+    try {
+      const connection = app.get(getConnectionToken());
+      const usersCol = connection.collection('users');
+      const r1 = await usersCol.updateMany({ phone: '' }, { $unset: { phone: 1 } });
+      const r2 = await usersCol.updateMany({ nationalId: '' }, { $unset: { nationalId: 1 } });
+      if (r1.modifiedCount || r2.modifiedCount) {
+        logger.log(`Migration: fixed ${r1.modifiedCount} empty phones, ${r2.modifiedCount} empty nationalIds`);
+      }
+      // Drop and recreate phone index as sparse+unique to be safe
+      try {
+        await usersCol.dropIndex('phone_1');
+        await usersCol.createIndex({ phone: 1 }, { unique: true, sparse: true });
+        logger.log('Recreated phone_1 index as sparse+unique');
+      } catch { /* index may not exist */ }
+      try {
+        await usersCol.dropIndex('nationalId_1');
+        await usersCol.createIndex({ nationalId: 1 }, { unique: true, sparse: true });
+        logger.log('Recreated nationalId_1 index as sparse+unique');
+      } catch { /* index may not exist */ }
+    } catch (e) {
+      logger.warn('Migration skipped: ' + (e as Error).message);
+    }
 
     // Schedule auction status updates every minute
     const auctionsService = app.get(AuctionsService);

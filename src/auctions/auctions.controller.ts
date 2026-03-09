@@ -102,10 +102,11 @@ export class AuctionsController {
     const mainImageUrl = await this.imageCompression.compressAndStoreProduct(
       mainImage.path,
     );
-    const additionalImagesUrl = await this.imageCompression.compressAndStoreMultiple(
-      additionalImages.map((file) => file.path),
-      { maxWidth: 1200, maxHeight: 1200, quality: 75 },
-    );
+    const additionalImagesUrl =
+      await this.imageCompression.compressAndStoreMultiple(
+        additionalImages.map((file) => file.path),
+        { maxWidth: 1200, maxHeight: 1200, quality: 75 },
+      );
 
     const mainImageFilename = mainImageUrl;
     const additionalImagesFilename = additionalImagesUrl;

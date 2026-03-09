@@ -131,8 +131,7 @@ export class AuctionProductsService {
       const mainImageUrl = product.mainImageUrl;
       const mainImageFilename = product.mainImageFilename;
       const additionalImagesUrl = product.additionalImagesUrl || [];
-      const additionalImagesFilename =
-        product.additionalImagesFilename || [];
+      const additionalImagesFilename = product.additionalImagesFilename || [];
 
       // Create auction with default values (admin can edit later)
       const minBidIncrement = product.minBidIncrement || 1;

@@ -343,12 +343,10 @@ export class AuthController {
     }
 
     // Compress avatar and store in MongoDB
-    const avatarUrl = await this.imageCompression.compressAndStoreAvatar(file.path);
-    return this.authService.updateProfileAvatar(
-      userId,
-      avatarUrl,
-      avatarUrl,
+    const avatarUrl = await this.imageCompression.compressAndStoreAvatar(
+      file.path,
     );
+    return this.authService.updateProfileAvatar(userId, avatarUrl, avatarUrl);
   }
 
   @Post('send-verification-code')
