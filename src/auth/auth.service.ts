@@ -120,6 +120,7 @@ export class AuthService {
       nationalIdFrontFilename: nationalIdImages.frontFilename,
       nationalIdBackUrl: nationalIdImages.backUrl,
       nationalIdBackFilename: nationalIdImages.backFilename,
+      walletBalance: 5000, // Welcome bonus
     });
 
     await user.save();
@@ -406,6 +407,7 @@ export class AuthService {
           oauthId: googleId,
           isProfileComplete: false,
           profileImageUrl: picture || '',
+          walletBalance: 5000, // Welcome bonus
         });
 
         await user.save();
@@ -515,6 +517,7 @@ export class AuthService {
           oauthId: fbUser.id,
           isProfileComplete: false,
           profileImageUrl: pictureUrl,
+          walletBalance: 5000, // Welcome bonus
         });
 
         await user.save();
@@ -778,6 +781,7 @@ export class AuthService {
         nationalId: undefined, // OAuth users need to complete profile
         authProvider: provider,
         isProfileComplete: false, // Mark as incomplete for OAuth users
+        walletBalance: 5000, // Welcome bonus
       });
 
       await user.save();
