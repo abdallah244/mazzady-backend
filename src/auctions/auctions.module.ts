@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module, forwardRef, Global } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Auction, AuctionSchema } from '../schemas/auction.schema';
 import { User, UserSchema } from '../schemas/user.schema';
@@ -11,6 +11,7 @@ import { ImageCompressionService } from '../image-compression.service';
 import { AuctionsGateway } from './auctions.gateway';
 import { NotificationsModule } from '../notifications/notifications.module';
 
+@Global()
 @Module({
   imports: [
     MongooseModule.forFeature([
