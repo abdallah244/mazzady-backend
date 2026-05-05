@@ -68,18 +68,23 @@ export class AuctionProductsService {
       status: 'pending',
     });
 
-      const savedProduct = await product.save();
-      
-      // Email Notification
-      if (seller && seller.email) {
-        await this.emailService.sendNotificationEmail(
-          seller.email,
-          'تم استلام طلب المزاد بنجاح',
-          `مرحباً، تم استلام طلب المزاد الخاص بك (<b>${productName}</b>)، وهو الآن قيد المراجعة من قبل الإدارة وسنعلمك فور الموافقة عليه.`
-        );
-      }
+    const savedProduct = await product.save();
 
-      return savedProduct;
+    // Email Notification
+    if (seller && seller.email) {
+      await this.emailService.sendNotificationEmail(
+        seller.email,
+        'تم استلام طلب المزاد بنجاح',
+        `مرحباً، تم استلام طلب المزاد الخاص بك (<b>${productName}</b>)، وهو الآن قيد المراجعة من قبل الإدارة وسنعلمك فور الموافقة عليه.`,
+      );
+    }
+
+    return savedProduct;
+  }
+
+  async getAllProducts(): Promise<AuctionProductDocument[]> {
+    return this.auctionProductModel.find().sort({ createdAt: -1 }).exec();
+  }
 
   async getProductById(id: string): Promise<AuctionProductDocument | null> {
     return this.auctionProductModel.findById(id).exec();
@@ -107,17 +112,22 @@ export class AuctionProductsService {
 
     product.status = 'approved';
     if (reviewedBy && Types.ObjectId.isValid(reviewedBy)) {
-      product.reviewedBy = new Types.ObjectId(reviewedBy) as any;
+      (product as any).reviewedBy = new Types.ObjectId(reviewedBy);
     }
     product.reviewedAt = new Date();
 
     const savedProduct = await product.save();
 
-const userObj=await this.userModel.findById(product.userId);
-if(userObj && userObj.email){
-await this.emailService.sendNotificationEmail(userObj.email,'تمت الموافقة على المزاد الخاص بك!', 'تهانينا، تمت الموافقة على المزاد الخاص بك وهو متاح الآن.');
-}
-// Create auction automatically from approved product
+    const userObj = await this.userModel.findById(product.userId);
+    if (userObj && userObj.email) {
+      await this.emailService.sendNotificationEmail(
+        userObj.email,
+        'تمت الموافقة على المزاد الخاص بك!',
+        'تهانينا، تمت الموافقة على المزاد الخاص بك وهو متاح الآن.',
+      );
+    }
+
+    // Create auction automatically from approved product
     try {
       const user = product.userId as any;
       // Get userId as string (handle both ObjectId and populated user)
