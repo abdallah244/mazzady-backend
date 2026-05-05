@@ -16,6 +16,7 @@ import { User, UserDocument } from '../schemas/user.schema';
 import { AuctionsService } from '../auctions/auctions.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { EmailService } from '../auth/email.service';
 
 @Injectable()
 export class AuctionProductsService {
@@ -28,6 +29,7 @@ export class AuctionProductsService {
     private userModel: Model<UserDocument>,
     @Inject(forwardRef(() => AuctionsService))
     private auctionsService: AuctionsService,
+    private readonly emailService: EmailService,
   ) {}
 
   async createProduct(
@@ -66,20 +68,18 @@ export class AuctionProductsService {
       status: 'pending',
     });
 
-    return product.save();
-  }
+      const savedProduct = await product.save();
+      
+      // Email Notification
+      if (seller && seller.email) {
+        await this.emailService.sendNotificationEmail(
+          seller.email,
+          'تم استلام طلب المزاد بنجاح',
+          `مرحباً، تم استلام طلب المزاد الخاص بك (<b>${productName}</b>)، وهو الآن قيد المراجعة من قبل الإدارة وسنعلمك فور الموافقة عليه.`
+        );
+      }
 
-  async getAllProducts(): Promise<AuctionProductDocument[]> {
-    return this.auctionProductModel
-      .find()
-      .populate({
-        path: 'userId',
-        select: 'firstName middleName lastName email profileImageUrl phone',
-        model: 'User',
-      })
-      .sort({ createdAt: -1 })
-      .exec();
-  }
+      return savedProduct;
 
   async getProductById(id: string): Promise<AuctionProductDocument | null> {
     return this.auctionProductModel.findById(id).exec();
@@ -113,7 +113,11 @@ export class AuctionProductsService {
 
     const savedProduct = await product.save();
 
-    // Create auction automatically from approved product
+const userObj=await this.userModel.findById(product.userId);
+if(userObj && userObj.email){
+await this.emailService.sendNotificationEmail(userObj.email,'تمت الموافقة على المزاد الخاص بك!', 'تهانينا، تمت الموافقة على المزاد الخاص بك وهو متاح الآن.');
+}
+// Create auction automatically from approved product
     try {
       const user = product.userId as any;
       // Get userId as string (handle both ObjectId and populated user)
