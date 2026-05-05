@@ -110,6 +110,16 @@ export class BidsService {
           savedBid._id.toString(),
           amount,
         );
+
+        // Send Email to previous bidder
+        const prevBidder = await this.userModel.findById(previousHighestBidderId);
+        if (prevBidder && prevBidder.email) {
+          await this.emailService.sendNotificationEmail(
+            prevBidder.email,
+            'Mazzady - Outbid Notification',
+            `Your bid on "${auction.productName}" has been outbid. The current highest bid is ${amount} EGP.`,
+          );
+        }
       } catch (error) {
         // Silently handle notification error
       }
@@ -126,6 +136,16 @@ export class BidsService {
         savedBid._id.toString(),
         `/auctions/${auctionId}`,
       );
+
+      // Send Email to seller
+      const seller = await this.userModel.findById(auction.sellerId);
+      if (seller && seller.email) {
+        await this.emailService.sendNotificationEmail(
+          seller.email,
+          'Mazzady - New Bid on Your Auction',
+          `A new bid of ${amount} EGP has been placed on your product "${auction.productName}".`,
+        );
+      }
     } catch (error) {
       // Silently handle notification error
     }

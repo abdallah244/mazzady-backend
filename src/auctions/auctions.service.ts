@@ -290,6 +290,7 @@ export class AuctionsService {
         status: 'active',
         endDate: { $lte: now },
       })
+      .populate('sellerId highestBidderId')
       .exec();
 
     // Update status to 'ended'
@@ -303,9 +304,63 @@ export class AuctionsService {
       },
     );
 
-    // Create products for ended auctions
+    // Create products and notify users for ended auctions
     for (const auction of expiredAuctions) {
       try {
+        const winner = auction.highestBidderId as any as UserDocument;
+        const seller = auction.sellerId as any as UserDocument;
+
+        // 1. Notify Winner
+        if (winner) {
+          try {
+            await this.notificationsService.notifyAuctionWon(
+              winner._id.toString(),
+              auction._id.toString(),
+              auction.highestBid,
+            );
+
+            if (winner.email) {
+              await this.emailService.sendNotificationEmail(
+                winner.email,
+                'Mazzady - Congratulations! You Won the Auction',
+                `Congratulations! You won the auction for "${auction.productName}" with a bid of ${auction.highestBid} EGP. Please proceed to complete your purchase.`,
+              );
+            }
+          } catch (err) {
+            this.logger.error(`Winner notification failed: ${err.message}`);
+          }
+        }
+
+        // 2. Notify Seller
+        if (seller) {
+          try {
+            const message = winner
+              ? `Your auction for "${auction.productName}" has ended. Winner: ${winner.nickname} with ${auction.highestBid} EGP.`
+              : `Your auction for "${auction.productName}" has ended with no bids.`;
+
+            await this.notificationsService.createNotification(
+              seller._id.toString(),
+              'auction_ended' as any,
+              'انتهى المزاد',
+              message,
+              auction._id.toString(),
+              undefined,
+              `/auctions/${auction._id}`,
+            );
+
+            if (seller.email) {
+              await this.emailService.sendNotificationEmail(
+                seller.email,
+                'Mazzady - Your Auction Has Ended',
+                message,
+              );
+            }
+          } catch (err) {
+            this.logger.error(`Seller notification failed: ${err.message}`);
+          }
+        }
+
+        // 3. Create product for the winner (as existing logic)
         // Check if product already exists for this auction
         const auctionIdStr =
           auction._id instanceof Types.ObjectId
