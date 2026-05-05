@@ -316,7 +316,7 @@ export class AuctionsService {
             await this.notificationsService.notifyAuctionWon(
               winner._id.toString(),
               auction._id.toString(),
-              auction.highestBid,
+              auction.highestBid || 0,
             );
 
             if (winner.email) {
