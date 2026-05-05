@@ -38,6 +38,14 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  private normalizePhone(phone: string): string {
+    return phone.replace(/\s+/g, '').replace(/-/g, '');
+  }
+
+  private normalizeNationalId(nationalId: string): string {
+    return nationalId.replace(/\s+/g, '').replace(/-/g, '');
+  }
+
   async register(
     email: string,
     password: string,
@@ -55,11 +63,9 @@ export class AuthService {
     },
   ) {
     // Normalize phone number (remove spaces, dashes, and ensure consistent format)
-    const normalizedPhone = phone.replace(/\s+/g, '').replace(/-/g, '');
+    const normalizedPhone = this.normalizePhone(phone);
     // Normalize national ID (remove spaces, dashes)
-    const normalizedNationalId = nationalId
-      .replace(/\s+/g, '')
-      .replace(/-/g, '');
+    const normalizedNationalId = this.normalizeNationalId(nationalId);
 
     // Validate Egyptian National ID format (14 digits, starting with 2 or 3)
     const egyptianNationalIdRegex = /^[23]\d{13}$/;
@@ -236,15 +242,13 @@ export class AuthService {
   }
 
   async checkPhoneExists(phone: string) {
-    const normalizedPhone = phone.replace(/\s+/g, '').replace(/-/g, '');
+    const normalizedPhone = this.normalizePhone(phone);
     const user = await this.userModel.findOne({ phone: normalizedPhone });
     return { exists: !!user };
   }
 
   async checkNationalIdExists(nationalId: string) {
-    const normalizedNationalId = nationalId
-      .replace(/\s+/g, '')
-      .replace(/-/g, '');
+    const normalizedNationalId = this.normalizeNationalId(nationalId);
     const user = await this.userModel.findOne({
       nationalId: normalizedNationalId,
     });
