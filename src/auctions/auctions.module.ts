@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Auction, AuctionSchema } from '../schemas/auction.schema';
 import { User, UserSchema } from '../schemas/user.schema';
@@ -7,8 +7,9 @@ import { Invoice, InvoiceSchema } from '../schemas/invoice.schema';
 import { CartItem, CartItemSchema } from '../schemas/cart-item.schema';
 import { AuctionsController } from './auctions.controller';
 import { AuctionsService } from './auctions.service';
-import { ProductsService } from '../products/products.service';
 import { ImageCompressionService } from '../image-compression.service';
+import { AuctionsGateway } from './auctions.gateway';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,9 +20,14 @@ import { ImageCompressionService } from '../image-compression.service';
       { name: Invoice.name, schema: InvoiceSchema },
       { name: CartItem.name, schema: CartItemSchema },
     ]),
+    forwardRef(() => NotificationsModule),
   ],
   controllers: [AuctionsController],
-  providers: [AuctionsService, ProductsService, ImageCompressionService],
-  exports: [AuctionsService],
+  providers: [
+    AuctionsService,
+    ImageCompressionService,
+    AuctionsGateway,
+  ],
+  exports: [AuctionsService, AuctionsGateway],
 })
 export class AuctionsModule {}

@@ -3,12 +3,16 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Auction, AuctionDocument } from '../schemas/auction.schema';
 import { User, UserDocument } from '../schemas/user.schema';
 import { Product, ProductDocument } from '../schemas/product.schema';
+import { AuctionsGateway } from './auctions.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -23,6 +27,10 @@ export class AuctionsService {
     private userModel: Model<UserDocument>,
     @InjectModel(Product.name)
     private productModel: Model<ProductDocument>,
+    @Inject(forwardRef(() => AuctionsGateway))
+    private auctionsGateway: AuctionsGateway,
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationsService: NotificationsService,
   ) {}
 
   async createAuction(
