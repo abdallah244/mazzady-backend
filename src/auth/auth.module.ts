@@ -15,6 +15,8 @@ import {
 } from '../schemas/email-verification.schema';
 import { ImageCompressionService } from '../image-compression.service';
 
+import { AdminGuard } from './admin.guard';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -41,8 +43,16 @@ import { ImageCompressionService } from '../image-compression.service';
     EmailService,
     JwtStrategy,
     JwtAuthGuard,
+    AdminGuard,
     ImageCompressionService,
   ],
-  exports: [AuthService, JwtModule, PassportModule, JwtAuthGuard, EmailService],
+  exports: [
+    AuthService,
+    JwtModule,
+    PassportModule,
+    JwtAuthGuard,
+    AdminGuard,
+    EmailService,
+  ],
 })
 export class AuthModule {}

@@ -8,6 +8,7 @@ import { User, UserSchema } from '../schemas/user.schema';
 import { MoneyRequestsController } from './money-requests.controller';
 import { MoneyRequestsService } from './money-requests.service';
 import { ImageCompressionService } from '../image-compression.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ImageCompressionService } from '../image-compression.service';
       { name: MoneyRequest.name, schema: MoneyRequestSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    AuthModule,
   ],
   controllers: [MoneyRequestsController],
   providers: [MoneyRequestsService, ImageCompressionService],

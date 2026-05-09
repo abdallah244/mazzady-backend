@@ -10,6 +10,7 @@ import { AdminMessagesModule } from '../admin-messages/admin-messages.module';
 import { ShippingTrackingModule } from '../shipping-tracking/shipping-tracking.module';
 import { LoyaltyPointsModule } from '../loyalty-points/loyalty-points.module';
 import { ActivityHistoryModule } from '../activity-history/activity-history.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -23,10 +24,10 @@ import { ActivityHistoryModule } from '../activity-history/activity-history.modu
     forwardRef(() => ShippingTrackingModule),
     forwardRef(() => LoyaltyPointsModule),
     forwardRef(() => ActivityHistoryModule),
+    AuthModule,
   ],
   controllers: [CartController],
   providers: [CartService],
   exports: [CartService],
 })
 export class CartModule {}
-

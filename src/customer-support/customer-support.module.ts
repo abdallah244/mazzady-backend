@@ -4,6 +4,7 @@ import { CustomerSupport, CustomerSupportSchema } from '../schemas/customer-supp
 import { User, UserSchema } from '../schemas/user.schema';
 import { CustomerSupportController } from './customer-support.controller';
 import { CustomerSupportService } from './customer-support.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -11,10 +12,10 @@ import { CustomerSupportService } from './customer-support.service';
       { name: CustomerSupport.name, schema: CustomerSupportSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    AuthModule,
   ],
   controllers: [CustomerSupportController],
   providers: [CustomerSupportService],
   exports: [CustomerSupportService],
 })
 export class CustomerSupportModule {}
-

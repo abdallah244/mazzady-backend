@@ -8,6 +8,7 @@ import { Auction, AuctionSchema } from '../schemas/auction.schema';
 import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
 import { ImageCompressionService } from '../image-compression.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ImageCompressionService } from '../image-compression.service';
       { name: CartItem.name, schema: CartItemSchema },
       { name: Auction.name, schema: AuctionSchema },
     ]),
+    AuthModule,
   ],
   controllers: [ProductsController],
   providers: [ProductsService, ImageCompressionService],
