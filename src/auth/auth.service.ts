@@ -339,9 +339,6 @@ export class AuthService {
     return { message: 'Email verified successfully', verified: true };
   }
 
-    }
-  }
-
   async googleCodeSignIn(code: string): Promise<any> {
     try {
       // 1. Exchange code for access token
