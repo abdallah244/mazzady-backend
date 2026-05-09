@@ -339,51 +339,68 @@ export class AuthService {
     return { message: 'Email verified successfully', verified: true };
   }
 
-  async googleSignIn(credential: string): Promise<any> {
-    try {
-      // Verify the Google ID token
-      const ticket = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`,
-      );
-      const payload = await ticket.json();
+    }
+  }
 
-      if (payload.error) {
-        throw new BadRequestException('Invalid Google token');
+  async googleCodeSignIn(code: string): Promise<any> {
+    try {
+      // 1. Exchange code for access token
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code,
+          client_id: process.env.GOOGLE_CLIENT_ID || '',
+          client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+          redirect_uri: 'postmessage', // Critical for popup code flow
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      const tokens = await tokenResponse.json();
+      if (tokens.error) {
+        throw new BadRequestException(
+          `Google OAuth error: ${tokens.error_description || tokens.error}`,
+        );
       }
 
-      // Verify the audience matches our client ID
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      if (payload.aud !== clientId) {
-        throw new BadRequestException('Token was not issued for this app');
+      // 2. Get user info using access token
+      const userResponse = await fetch(
+        'https://www.googleapis.com/oauth2/v2/userinfo',
+        {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        },
+      );
+      const googleUser = await userResponse.json();
+
+      if (googleUser.error) {
+        throw new BadRequestException('Failed to get Google user info');
       }
 
       const {
         email,
         given_name,
         family_name,
-        sub: googleId,
+        id: googleId,
         picture,
-      } = payload;
+      } = googleUser;
 
       if (!email) {
         throw new BadRequestException('Google account has no email');
       }
 
-      // Check if user already exists
+      // 3. Check if user already exists or create new
       let user = await this.userModel.findOne({ email });
 
       if (user) {
-        // Existing user - update OAuth info if needed
         if (!user.oauthId) {
           user.oauthId = googleId;
           user.authProvider = 'google';
         }
         user.isOnline = true;
         user.lastActivity = new Date();
-        user.visitsThisMonth = (user.visitsThisMonth || 0) + 1;
         await user.save();
       } else {
-        // New user - create account
         const baseNickname = (email.split('@')[0] || 'user')
           .toLowerCase()
           .replace(/[^a-z0-9]/g, '');
@@ -392,10 +409,6 @@ export class AuthService {
         while (await this.userModel.findOne({ nickname })) {
           nickname = `${baseNickname}${counter}`;
           counter++;
-          if (counter > 100) {
-            nickname = `${baseNickname}${Date.now()}`;
-            break;
-          }
         }
 
         user = new this.userModel({
@@ -405,42 +418,30 @@ export class AuthService {
           middleName: '',
           lastName: family_name || '',
           nickname,
-          phone: undefined,
-          nationalId: undefined,
           authProvider: 'google',
           oauthId: googleId,
           isProfileComplete: false,
           profileImageUrl: picture || '',
-          walletBalance: 80000, // Welcome bonus
+          walletBalance: 80000,
         });
-
         await user.save();
-        this.logger.log(`New Google user created: ${email}`);
       }
 
-      // Generate JWT tokens
-      const tokens = this.generateTokens(user);
-
+      // 4. Return tokens
       return {
         message: 'Google sign-in successful',
-        ...tokens,
+        ...this.generateTokens(user),
         user: {
           id: user._id.toString(),
           email: user.email,
           firstName: user.firstName,
-          middleName: user.middleName,
-          lastName: user.lastName,
           nickname: user.nickname,
-          phone: user.phone,
-          isProfileComplete: user.isProfileComplete,
           profileImageUrl: user.profileImageUrl,
+          isProfileComplete: user.isProfileComplete,
         },
       };
     } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      this.logger.error('Google sign-in failed', error);
+      this.logger.error('Google code sign-in failed', error);
       throw new BadRequestException(
         `Google sign-in failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );

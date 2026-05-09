@@ -138,3 +138,9 @@ export class FacebookSignInDto {
   @IsNotEmpty({ message: 'Facebook access token is required' })
   accessToken!: string;
 }
+
+export class GoogleCodeSignInDto {
+  @IsString({ message: 'Google code is required' })
+  @IsNotEmpty({ message: 'Google code is required' })
+  code!: string;
+}

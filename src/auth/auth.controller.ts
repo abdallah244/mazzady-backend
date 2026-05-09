@@ -38,6 +38,7 @@ import {
   RefreshTokenDto,
   GoogleSignInDto,
   FacebookSignInDto,
+  GoogleCodeSignInDto,
 } from './dto/auth.dto';
 
 @Controller('auth')
@@ -402,7 +403,12 @@ export class AuthController {
 
   @Post('google-signin')
   async googleSignIn(@Body() body: GoogleSignInDto) {
-    return this.authService.googleSignIn(body.credential);
+    return this.authService.googleCodeSignIn(body.credential); // Fallback if still used
+  }
+
+  @Post('google-code-signin')
+  async googleCodeSignIn(@Body() body: GoogleCodeSignInDto) {
+    return this.authService.googleCodeSignIn(body.code);
   }
 
   @Post('facebook-signin')
