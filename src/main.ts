@@ -1,3 +1,6 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { join } from 'path';
@@ -132,6 +135,15 @@ async function bootstrap() {
     await app.listen(port, '0.0.0.0');
     logger.log(`Application running on port ${port}`);
     logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Auto-seed database if empty
+    try {
+      const connection = app.get(getConnectionToken());
+      const { autoSeed } = await import('./auto-seed.js');
+      await autoSeed(connection, logger);
+    } catch (seedErr) {
+      logger.error('Failed to run automatic database seeding:', seedErr);
+    }
 
     // One-time migration: fix OAuth users with empty string phone/nationalId
     try {
