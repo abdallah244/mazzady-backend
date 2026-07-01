@@ -31,9 +31,9 @@ export class AdminController {
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 attempts per minute - brute force protection
   async adminLogin(@Body() body: { email: string; password: string }) {
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
-    const adminPasswordHash = this.configService.get<string>('ADMIN_PASSWORD');
+    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD');
 
-    if (!adminEmail || !adminPasswordHash) {
+    if (!adminEmail || !adminPassword) {
       throw new UnauthorizedException('Admin credentials not configured');
     }
 
@@ -42,11 +42,17 @@ export class AdminController {
       throw new UnauthorizedException('Invalid admin credentials');
     }
 
-    // Validate password against bcrypt hash from env
-    const isPasswordValid = await bcrypt.compare(
-      body.password,
-      adminPasswordHash,
-    );
+    // Validate password - support both bcrypt hash and plain text
+    // bcrypt hashes start with $2b$ or $2a$ - but $ can get corrupted by dotenv
+    let isPasswordValid = false;
+    if (adminPassword.startsWith('$2b$') || adminPassword.startsWith('$2a$')) {
+      // Password is stored as bcrypt hash
+      isPasswordValid = await bcrypt.compare(body.password, adminPassword);
+    } else {
+      // Password is stored as plain text (safer for env vars with $ issues)
+      isPasswordValid = body.password === adminPassword;
+    }
+
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid admin credentials');
     }

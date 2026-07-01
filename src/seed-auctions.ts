@@ -4,9 +4,11 @@
  */
 import mongoose from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import * as dotenv from 'dotenv';
 
-const MONGO_URI =
-  'mongodb+srv://abdallahhfares_db_user:87p3y73Sa3w2splG@mazzady.tedodg0.mongodb.net/projectdata?appName=mazzady';
+dotenv.config();
+
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/mazzady_local';
 
 // 15 auctions across 9 categories, durations 1 week → 3 months
 const auctionData = [

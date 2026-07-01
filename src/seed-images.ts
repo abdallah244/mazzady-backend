@@ -3,9 +3,10 @@
  * Run: npx ts-node src/seed-images.ts
  */
 import mongoose from 'mongoose';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
-const MONGO_URI =
-  'mongodb+srv://abdallahhfares_db_user:87p3y73Sa3w2splG@mazzady.tedodg0.mongodb.net/projectdata?appName=mazzady';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/mazzady_local';
 
 // Real product images from Unsplash (free to use)
 const auctionImages: Record<string, string> = {
